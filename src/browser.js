@@ -29,7 +29,7 @@ async function launchBrowser() {
   await page.setRequestInterception(true);
   page.on('request', (req) => {
     const type = req.resourceType();
-    if (['image', 'font', 'media', 'stylesheet'].includes(type)) {
+    if (['image', 'font', 'media'].includes(type)) {
       req.abort();
     } else {
       req.continue();
