@@ -1,6 +1,5 @@
 const readline = require('readline');
 
-// Helper to pause and wait for manual input (verification code)
 function waitForInput(prompt) {
   return new Promise((resolve) => {
     const rl = readline.createInterface({
@@ -16,63 +15,111 @@ function waitForInput(prompt) {
 
 async function login(page) {
   console.log('Navigating to BC Game...');
-  await page.goto('https://bc.game', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.goto('https://bc.game', {
+    waitUntil: 'domcontentloaded',
+    timeout: 60000
+  });
 
-// Take screenshot to see what page looks like on Render
-await page.screenshot({ path: '/tmp/bcgame-page.png', fullPage: true });
+  // Wait for page to stabilize
+  await new Promise(r => setTimeout(r, 5000));
 
-// Dump all buttons and clickable elements
-const elements = await page.evaluate(() => {
-  const buttons = Array.from(document.querySelectorAll('button, a, [role="button"]'));
-  return buttons.map(b => ({
-    tag: b.tagName,
-    classes: b.className,
-    text: b.textContent.trim().slice(0, 30)
-  })).filter(b => b.text.length > 0).slice(0, 20);
-});
-console.log('=== PAGE ELEMENTS ===');
-console.log(JSON.stringify(elements, null, 2));
-console.log('=== END ===');
+  // Step 1: Accept cookie banner if present
+  try {
+    const cookieBtn = await page.$('button');
+    const buttons = await page.$$('button');
+    for (const btn of buttons) {
+      const text = await page.evaluate(el => el.textContent.trim(), btn);
+      if (text.toLowerCase().includes('accept')) {
+        await btn.click();
+        console.log('Cookie banner accepted');
+        await new Promise(r => setTimeout(r, 2000));
+        break;
+      }
+    }
+  } catch {
+    console.log('No cookie banner found, continuing...');
+  }
 
-  // Click login button
+  // Take screenshot after cookie dismiss
+  await page.screenshot({ path: '/tmp/after-cookie.png', fullPage: false });
+
+  // Step 2: Find login button by text content
   console.log('Looking for login button...');
-  await page.waitForSelector('[class*="login"], button[class*="sign"]', { timeout: 15000 });
-  await page.click('[class*="login"], button[class*="sign"]');
+  const loginClicked = await page.evaluate(() => {
+    const allButtons = Array.from(document.querySelectorAll('button, a, [role="button"], div'));
+    const loginBtn = allButtons.find(el => {
+      const text = el.textContent.trim().toLowerCase();
+      return (text === 'log in' || text === 'login' || text === 'sign in') && text.length < 15;
+    });
+    if (loginBtn) {
+      loginBtn.click();
+      return true;
+    }
+    return false;
+  });
 
-  // Wait for login modal/form
-  await page.waitForSelector('input[type="email"], input[placeholder*="mail"]', { timeout: 15000 });
+  if (!loginClicked) {
+    // Dump all buttons for debugging
+    const allBtns = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('button, a[href], [role="button"]'))
+        .map(el => ({ text: el.textContent.trim().slice(0, 30), classes: el.className }))
+        .filter(el => el.text.length > 0)
+        .slice(0, 30);
+    });
+    console.log('Could not find login button. All buttons:', JSON.stringify(allBtns, null, 2));
+    throw new Error('Login button not found');
+  }
+
+  console.log('Login button clicked');
+  await new Promise(r => setTimeout(r, 3000));
+
+  // Screenshot after clicking login
+  await page.screenshot({ path: '/tmp/after-login-click.png', fullPage: false });
+
+  // Step 3: Wait for email input
+  await page.waitForSelector('input[type="email"], input[placeholder*="mail"], input[placeholder*="Email"]', {
+    timeout: 15000
+  });
   console.log('Login form detected...');
 
-  // Enter email
   await page.type('input[type="email"], input[placeholder*="mail"]', process.env.BCGAME_EMAIL, { delay: 80 });
-
-  // Enter password
   await page.type('input[type="password"]', process.env.BCGAME_PASSWORD, { delay: 80 });
 
-  // Submit
+  await page.screenshot({ path: '/tmp/after-credentials.png', fullPage: false });
+
   await page.keyboard.press('Enter');
   console.log('Credentials submitted...');
 
-  // Check if verification code is needed
+  // Step 4: Handle verification code
   try {
-    await page.waitForSelector('input[placeholder*="code"], input[placeholder*="verif"]', { timeout: 10000 });
+    await page.waitForSelector(
+      'input[placeholder*="code"], input[placeholder*="verif"], input[placeholder*="Code"]',
+      { timeout: 10000 }
+    );
     console.log('Verification code required!');
-
-    const code = await waitForInput('Enter the verification code sent to your email/phone: ');
-
-    await page.type('input[placeholder*="code"], input[placeholder*="verif"]', code, { delay: 80 });
+    const code = await waitForInput('Enter the verification code: ');
+    await page.type(
+      'input[placeholder*="code"], input[placeholder*="verif"], input[placeholder*="Code"]',
+      code,
+      { delay: 80 }
+    );
     await page.keyboard.press('Enter');
     console.log('Verification code submitted...');
   } catch {
     console.log('No verification code required, continuing...');
   }
 
-  // Wait for successful login (balance element usually appears)
+  // Step 5: Confirm login success
+  await new Promise(r => setTimeout(r, 5000));
+  await page.screenshot({ path: '/tmp/after-login.png', fullPage: false });
+
   try {
-    await page.waitForSelector('[class*="balance"], [class*="wallet"]', { timeout: 20000 });
+    await page.waitForSelector('[class*="balance"], [class*="wallet"], [class*="avatar"], [class*="user"]', {
+      timeout: 15000
+    });
     console.log('Login successful!');
   } catch {
-    console.log('Login may have succeeded, proceeding anyway...');
+    console.log('Could not confirm login, proceeding anyway...');
   }
 }
 
