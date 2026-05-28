@@ -18,6 +18,22 @@ async function login(page) {
   console.log('Navigating to BC Game...');
   await page.goto('https://bc.game', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
+// Take screenshot to see what page looks like on Render
+await page.screenshot({ path: '/tmp/bcgame-page.png', fullPage: true });
+
+// Dump all buttons and clickable elements
+const elements = await page.evaluate(() => {
+  const buttons = Array.from(document.querySelectorAll('button, a, [role="button"]'));
+  return buttons.map(b => ({
+    tag: b.tagName,
+    classes: b.className,
+    text: b.textContent.trim().slice(0, 30)
+  })).filter(b => b.text.length > 0).slice(0, 20);
+});
+console.log('=== PAGE ELEMENTS ===');
+console.log(JSON.stringify(elements, null, 2));
+console.log('=== END ===');
+
   // Click login button
   console.log('Looking for login button...');
   await page.waitForSelector('[class*="login"], button[class*="sign"]', { timeout: 15000 });
