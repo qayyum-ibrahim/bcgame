@@ -31,13 +31,14 @@ async function main() {
     console.log("Navigation failed:", err.message);
   }
   await testPage.close();
-  
+
   try {
     await login(page);
 
     console.log("Navigating to crash game...");
+
     await page.goto("https://bc.game/game/crash", {
-      waitUntil: "networkidle2",
+      waitUntil: "domcontentloaded",
       timeout: 60000,
     });
 

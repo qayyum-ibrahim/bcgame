@@ -16,7 +16,7 @@ function waitForInput(prompt) {
 
 async function login(page) {
   console.log('Navigating to BC Game...');
-  await page.goto('https://bc.game', { waitUntil: 'networkidle2', timeout: 60000 });
+  await page.goto('https://bc.game', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
   // Click login button
   console.log('Looking for login button...');
