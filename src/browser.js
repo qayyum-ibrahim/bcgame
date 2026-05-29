@@ -26,15 +26,15 @@ async function launchBrowser() {
   const page = await browser.newPage();
 
   // Block heavy resources to save memory
-  await page.setRequestInterception(true);
-  page.on('request', (req) => {
-    const type = req.resourceType();
-    if (['image', 'font', 'media'].includes(type)) {
-      req.abort();
-    } else {
-      req.continue();
-    }
-  });
+  // await page.setRequestInterception(true);
+  // page.on('request', (req) => {
+  //   const type = req.resourceType();
+  //   if (['image', 'font', 'media'].includes(type)) {
+  //     req.abort();
+  //   } else {
+  //     req.continue();
+  //   }
+  // });
 
   await page.setViewport({ width: 1280, height: 800 });
   await page.setUserAgent(

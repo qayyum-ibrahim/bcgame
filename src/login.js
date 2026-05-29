@@ -16,44 +16,32 @@ function waitForInput(prompt) {
 async function login(page) {
   console.log('Navigating to BC Game...');
   await page.goto('https://bc.game', {
-    waitUntil: 'domcontentloaded',
+    waitUntil: 'load',
     timeout: 60000
   });
 
-  // Wait for React to mount and render UI
-  console.log('Waiting for React to render...');
-  await page.waitForFunction(
-    () => document.querySelectorAll('button').length > 2,
-    { timeout: 30000 }
-  );
-  console.log('Page rendered');
+  // Wait fixed time instead of waiting for buttons
+  await new Promise(r => setTimeout(r, 8000));
 
-  await new Promise(r => setTimeout(r, 3000));
+  // Screenshot immediately
   await page.screenshot({ path: '/tmp/bcgame-page.png' });
 
-  // Dump buttons for visibility
-  const allBtns = await page.evaluate(() => {
-    return Array.from(document.querySelectorAll('button, a, [role="button"]'))
-      .map(el => ({ text: el.textContent.trim().slice(0, 30), classes: el.className }))
-      .filter(el => el.text.length > 0)
-      .slice(0, 30);
+  // Check button count and page title
+  const diagnostics = await page.evaluate(() => {
+    return {
+      title: document.title,
+      url: window.location.href,
+      buttonCount: document.querySelectorAll('button').length,
+      bodyText: document.body.innerText.slice(0, 300),
+      scripts: Array.from(document.scripts).length
+    };
   });
-  console.log('Buttons found:', JSON.stringify(allBtns, null, 2));
 
-  // Accept cookie banner
-  try {
-    for (const btn of await page.$$('button')) {
-      const text = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
-      if (text.includes('accept')) {
-        await btn.click();
-        console.log('Cookie banner accepted');
-        await new Promise(r => setTimeout(r, 2000));
-        break;
-      }
-    }
-  } catch {
-    console.log('No cookie banner, continuing...');
-  }
+  console.log('=== PAGE DIAGNOSTICS ===');
+  console.log(JSON.stringify(diagnostics, null, 2));
+  console.log('========================');
+
+  // Rest of login code below...
 
   // Find login button by text
   console.log('Looking for login button...');
