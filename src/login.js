@@ -14,74 +14,52 @@ function waitForInput(prompt) {
 }
 
 async function login(page) {
-  console.log('Navigating to BC Game...');
-  await page.goto('https://bc.game', {
+  console.log('Navigating directly to signin page...');
+  await page.goto('https://bc.game/login/signin', {
     waitUntil: 'load',
     timeout: 60000
   });
 
-  // Wait fixed time instead of waiting for buttons
-  await new Promise(r => setTimeout(r, 8000));
+  await new Promise(r => setTimeout(r, 5000));
+  await page.screenshot({ path: '/tmp/signin-page.png' });
 
-  // Screenshot immediately
-  await page.screenshot({ path: '/tmp/bcgame-page.png' });
-
-  // Check button count and page title
-  const diagnostics = await page.evaluate(() => {
-    return {
-      title: document.title,
-      url: window.location.href,
-      buttonCount: document.querySelectorAll('button').length,
-      bodyText: document.body.innerText.slice(0, 300),
-      scripts: Array.from(document.scripts).length
-    };
-  });
-
-  console.log('=== PAGE DIAGNOSTICS ===');
-  console.log(JSON.stringify(diagnostics, null, 2));
-  console.log('========================');
-
-  // Rest of login code below...
-
-  // Find login button by text
-  console.log('Looking for login button...');
-  const loginClicked = await page.evaluate(() => {
-    const all = Array.from(document.querySelectorAll('button, a, [role="button"], div, span'));
-    const loginBtn = all.find(el => {
-      const text = el.textContent.trim().toLowerCase();
-      return (text === 'log in' || text === 'login' || text === 'sign in') && text.length < 15;
-    });
-    if (loginBtn) {
-      loginBtn.click();
-      return true;
+  // Accept cookie banner if present
+  try {
+    const buttons = await page.$$('button');
+    for (const btn of buttons) {
+      const text = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
+      if (text.includes('accept')) {
+        await btn.click();
+        console.log('Cookie banner accepted');
+        await new Promise(r => setTimeout(r, 2000));
+        break;
+      }
     }
-    return false;
-  });
-
-  if (!loginClicked) {
-    await page.screenshot({ path: '/tmp/login-failed.png' });
-    throw new Error('Login button not found');
+  } catch {
+    console.log('No cookie banner, continuing...');
   }
 
-  console.log('Login button clicked');
-  await new Promise(r => setTimeout(r, 3000));
-
-  // Rest of login flow stays the same...
+  // Wait for email input directly - no button clicking needed
+  console.log('Waiting for login form...');
   await page.waitForSelector(
-    'input[type="email"], input[placeholder*="mail"], input[placeholder*="Email"]',
-    { timeout: 15000 }
+    'input[type="email"], input[placeholder*="mail"], input[placeholder*="Email"], input[name="email"]',
+    { timeout: 20000 }
   );
   console.log('Login form detected...');
 
+  await page.screenshot({ path: '/tmp/signin-form.png' });
+
   await page.type(
-    'input[type="email"], input[placeholder*="mail"]',
+    'input[type="email"], input[placeholder*="mail"], input[placeholder*="Email"], input[name="email"]',
     process.env.BCGAME_EMAIL,
     { delay: 80 }
   );
   await page.type('input[type="password"]', process.env.BCGAME_PASSWORD, { delay: 80 });
+
   await page.keyboard.press('Enter');
   console.log('Credentials submitted...');
 
+  // Handle verification code if needed
   try {
     await page.waitForSelector(
       'input[placeholder*="code"], input[placeholder*="verif"], input[placeholder*="Code"]',
@@ -94,11 +72,12 @@ async function login(page) {
       rl.question('Enter verification code: ', (answer) => { rl.close(); resolve(answer.trim()); });
     });
     await page.type(
-      'input[placeholder*="code"], input[placeholder*="verif"]',
+      'input[placeholder*="code"], input[placeholder*="verif"], input[placeholder*="Code"]',
       code,
       { delay: 80 }
     );
     await page.keyboard.press('Enter');
+    console.log('Verification code submitted...');
   } catch {
     console.log('No verification code required, continuing...');
   }
