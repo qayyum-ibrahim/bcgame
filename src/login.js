@@ -6,7 +6,6 @@ async function login(page) {
   });
 
   await new Promise(r => setTimeout(r, 5000));
-  await page.screenshot({ path: '/tmp/signin-page.png' });
 
   // Accept cookie banner if present
   try {
@@ -32,7 +31,6 @@ async function login(page) {
   );
   console.log('Login form detected...');
 
-  await page.screenshot({ path: '/tmp/signin-form.png' });
 
   await page.type(
     'input[type="email"], input[placeholder*="mail"], input[placeholder*="Email"], input[name="email"]',
@@ -68,7 +66,6 @@ async function login(page) {
   }
 
   await new Promise(r => setTimeout(r, 5000));
-  await page.screenshot({ path: '/tmp/after-login.png' });
   console.log('Login flow complete');
 }
 
