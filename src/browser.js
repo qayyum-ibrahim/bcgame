@@ -1,35 +1,49 @@
-const puppeteer = require('puppeteer');
+const isLocal = process.env.NODE_ENV === 'development';
 
 async function launchBrowser() {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--window-size=1280,800',
-      '--disable-extensions',
-      '--disable-background-networking',
-      '--disable-default-apps',
-      '--disable-sync',
-      '--disable-translate',
-      '--hide-scrollbars',
-      '--metrics-recording-only',
-      '--mute-audio',
-      '--no-first-run',
-      '--safebrowsing-disable-auto-update',
-      '--js-flags=--max-old-space-size=256'
-    ]
-  });
+  let browser;
+
+  if (isLocal) {
+    const puppeteer = require('puppeteer');
+    browser = await puppeteer.launch({
+      headless: true,
+      executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--mute-audio',
+        '--no-first-run',
+      ]
+    });
+  } else {
+    const puppeteer = require('puppeteer-core');
+    const chromium = require('@sparticuz/chromium');
+    browser = await puppeteer.launch({
+      args: [
+        ...chromium.args,
+        '--disable-background-networking',
+        '--disable-default-apps',
+        '--disable-sync',
+        '--mute-audio',
+        '--no-first-run',
+        '--single-process',
+        '--js-flags=--max-old-space-size=128'
+      ],
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+    });
+  }
 
   const page = await browser.newPage();
 
-  // Block heavy resources to save memory
+  // Block unnecessary resources
   await page.setRequestInterception(true);
   page.on('request', (req) => {
     const type = req.resourceType();
-    if (['image', 'font', 'media'].includes(type)) {
+    if (['image', 'font', 'media', 'stylesheet'].includes(type)) {
       req.abort();
     } else {
       req.continue();

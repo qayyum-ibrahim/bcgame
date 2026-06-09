@@ -43,7 +43,7 @@ async function startScraping(page) {
       const items = document.querySelectorAll(SELECTOR);
       if (!items || items.length === 0) return null;
 
-      const first = items[0];
+      const first = items[items.length - 1];
       const roundIdEl = first.querySelector('span.text-tertiary');
       const crashEl = first.querySelector('span.font-extrabold');
 
