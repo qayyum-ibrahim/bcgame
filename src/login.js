@@ -26,7 +26,7 @@ async function login(page) {
     "Body text:",
     await page.evaluate(() => document.body.innerText.slice(0, 200)),
   );
-  
+
   // Accept cookie banner if present
   try {
     const buttons = await page.$$("button");
@@ -79,30 +79,33 @@ async function login(page) {
   await page.waitForSelector("input", { timeout: 15000 });
   console.log("Login form detected...");
 
-  // Find email input - first non-password input
-  const inputs = await page.$$("input");
-  let emailInput = null;
-  for (const input of inputs) {
-    const type = await page.evaluate((el) => el.type, input);
-    if (type !== "password") {
-      emailInput = input;
-      break;
-    }
-  }
+  // Do everything in one evaluate call - much faster
+  await page.evaluate(
+    (email, password) => {
+      const inputs = Array.from(document.querySelectorAll("input"));
+      const emailInput = inputs.find((el) => el.type !== "password");
+      const passwordInput = inputs.find((el) => el.type === "password");
 
-  const passwordInput = await page.$('input[type="password"]');
+      if (emailInput) {
+        emailInput.focus();
+        emailInput.value = email;
+        emailInput.dispatchEvent(new Event("input", { bubbles: true }));
+        emailInput.dispatchEvent(new Event("change", { bubbles: true }));
+      }
 
-  if (!emailInput || !passwordInput) {
-    throw new Error("Could not find email or password inputs");
-  }
+      if (passwordInput) {
+        passwordInput.focus();
+        passwordInput.value = password;
+        passwordInput.dispatchEvent(new Event("input", { bubbles: true }));
+        passwordInput.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    },
+    process.env.BCGAME_EMAIL,
+    process.env.BCGAME_PASSWORD,
+  );
 
-  await emailInput.click();
-  await emailInput.type(process.env.BCGAME_EMAIL, { delay: 80 });
-  console.log("Email entered");
-
-  await passwordInput.click();
-  await passwordInput.type(process.env.BCGAME_PASSWORD, { delay: 80 });
-  console.log("Password entered");
+  console.log("Credentials entered");
+  await new Promise((r) => setTimeout(r, 1000));
 
   // Click Sign In button inside modal
   const submitted = await page.evaluate(() => {

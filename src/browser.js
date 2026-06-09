@@ -7,6 +7,7 @@ async function launchBrowser() {
     const puppeteer = require("puppeteer");
     browser = await puppeteer.launch({
       headless: true,
+      protocolTimeout: 60000,
       executablePath:
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
       args: [
@@ -22,6 +23,7 @@ async function launchBrowser() {
     const puppeteer = require("puppeteer-core");
     const chromium = require("@sparticuz/chromium");
     browser = await puppeteer.launch({
+      protocolTimeout: 60000,
       args: [
         ...chromium.args,
         "--disable-background-networking",
