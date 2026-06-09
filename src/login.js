@@ -10,6 +10,23 @@ async function login(page) {
   console.log("Waiting for page to render...");
   await new Promise((r) => setTimeout(r, 15000));
 
+  // Diagnostic - remove after fixing
+  const html = await page.content();
+  require("fs").writeFileSync("/tmp/debug.html", html);
+  await page.screenshot({ path: "/tmp/debug.png", fullPage: false });
+  console.log(
+    "Button count:",
+    await page.evaluate(() => document.querySelectorAll("button").length),
+  );
+  console.log(
+    "Input count:",
+    await page.evaluate(() => document.querySelectorAll("input").length),
+  );
+  console.log(
+    "Body text:",
+    await page.evaluate(() => document.body.innerText.slice(0, 200)),
+  );
+  
   // Accept cookie banner if present
   try {
     const buttons = await page.$$("button");

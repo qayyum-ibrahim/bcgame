@@ -10,29 +10,15 @@ function startServer() {
   });
 
   app.get("/screenshot", (req, res) => {
-    const file = "/tmp/bcgame-page.png";
-    if (fs.existsSync(file)) {
-      res.sendFile(file);
-    } else {
-      res.json({ error: "No screenshot yet" });
-    }
-  });
-  app.get("/screenshot2", (req, res) => {
-    const file = "/tmp/after-cookie.png";
-    if (fs.existsSync(file)) {
-      res.sendFile(file);
-    } else {
-      res.json({ error: "No screenshot yet" });
-    }
+    const file = "/tmp/debug.png";
+    if (fs.existsSync(file)) res.sendFile(file);
+    else res.json({ error: "No screenshot yet" });
   });
 
-  app.get("/screenshot3", (req, res) => {
-    const file = "/tmp/after-login-click.png";
-    if (fs.existsSync(file)) {
-      res.sendFile(file);
-    } else {
-      res.json({ error: "No screenshot yet" });
-    }
+  app.get("/html", (req, res) => {
+    const file = "/tmp/debug.html";
+    if (fs.existsSync(file)) res.send(fs.readFileSync(file, "utf8"));
+    else res.json({ error: "No HTML yet" });
   });
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
