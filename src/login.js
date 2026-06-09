@@ -46,23 +46,40 @@ async function login(page) {
     console.log("No cookie banner...");
   }
 
-  // Try clicking Sign In button
+  // Replace the signInClicked evaluate block with this:
   console.log("Clicking Sign In button...");
-  const signInClicked = await page.evaluate(() => {
-    const buttons = Array.from(
-      document.querySelectorAll('button[type="button"]'),
+  try {
+    // Wait for Sign In button to be available
+    await page.waitForFunction(
+      () => {
+        const buttons = Array.from(
+          document.querySelectorAll('button[type="button"]'),
+        );
+        return buttons.some((b) => b.textContent.trim() === "Sign In");
+      },
+      { timeout: 15000 },
     );
-    const signInBtn = buttons.find((b) => b.textContent.trim() === "Sign In");
-    if (signInBtn) {
-      signInBtn.click();
-      return true;
-    }
-    return false;
-  });
 
-  if (!signInClicked) {
-    // Fallback - navigate directly
-    console.log("Sign In button not found, navigating directly...");
+    // Use evaluate just to get position then click via mouse
+    const btnPosition = await page.evaluate(() => {
+      const buttons = Array.from(
+        document.querySelectorAll('button[type="button"]'),
+      );
+      const signInBtn = buttons.find((b) => b.textContent.trim() === "Sign In");
+      if (!signInBtn) return null;
+      const rect = signInBtn.getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    });
+
+    if (btnPosition) {
+      await page.mouse.click(btnPosition.x, btnPosition.y);
+      console.log("Sign In clicked via mouse");
+    } else {
+      throw new Error("Sign In button position not found");
+    }
+  } catch {
+    // Fallback to direct navigation
+    console.log("Sign In click failed, navigating directly...");
     await page
       .goto("https://bc.game/login/signin", {
         waitUntil: "domcontentloaded",
@@ -70,11 +87,10 @@ async function login(page) {
       })
       .catch(() => console.log("Direct navigation incomplete, continuing..."));
     await new Promise((r) => setTimeout(r, 10000));
-  } else {
-    console.log("Sign In clicked, waiting for modal...");
-    await new Promise((r) => setTimeout(r, 3000));
   }
 
+  console.log("Waiting for modal...");
+  await new Promise((r) => setTimeout(r, 5000));
   // Wait for any input to appear
   await page.waitForSelector("input", { timeout: 15000 });
   console.log("Login form detected...");

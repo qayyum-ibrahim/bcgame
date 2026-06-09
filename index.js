@@ -1,6 +1,5 @@
 require('dotenv').config();
 process.env.TZ = 'Africa/Lagos';
-
 const connectDB = require('./src/db');
 const launchBrowser = require('./src/browser');
 const login = require('./src/login');
